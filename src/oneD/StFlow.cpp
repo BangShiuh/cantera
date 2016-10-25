@@ -99,11 +99,6 @@ StFlow::StFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
     m_kRadiating[0] = m_thermo->speciesIndex("CO2");
     m_kRadiating[1] = m_thermo->speciesIndex("H2O");
 
-    // Find indices for radiating species
-    m_kRadiating.resize(2, npos);
-    m_kRadiating[0] = m_thermo->speciesIndex("CO2");
-    m_kRadiating[1] = m_thermo->speciesIndex("H2O");
-
     // Find indices for charge of species
     for (size_t k = 0; k < m_nsp; k++){
         if (m_speciesCharge[k] != 0){
