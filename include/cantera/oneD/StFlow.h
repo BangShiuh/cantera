@@ -23,7 +23,9 @@ const size_t c_offset_U = 0; // axial velocity
 const size_t c_offset_V = 1; // strain rate
 const size_t c_offset_T = 2; // temperature
 const size_t c_offset_L = 3; // (1/r)dP/dr
-const size_t c_offset_Y = 4; // mass fractions
+const size_t c_offset_E1 = 4; // Electric potential
+const size_t c_offset_E2 = 5; // Electric field strength
+const size_t c_offset_Y = 6; // mass fractions
 
 class Transport;
 
@@ -238,6 +240,18 @@ public:
         return m_kExcessRight;
     }
 
+    //! Turn electric effect on/off
+    void enableElectric(bool withElectric); 
+    bool withElectric() const {
+        return m_do_electric;
+    }
+
+    //! Turn Poisson equation on/off
+    void enablePoisson(bool withPoisson); 
+    bool withPoisson() const {
+        return m_do_poisson;
+    }
+
 protected:
     doublereal wdot(size_t k, size_t j) const {
         return m_wdot(k,j);
@@ -313,6 +327,23 @@ protected:
     doublereal flux(size_t k, size_t j) const {
         return m_flux(k, j);
     }
+
+    doublereal phi(const doublereal* x, size_t j) const {
+        return x[index(c_offset_E1, j)];
+    }
+
+    doublereal dphidz(const doublereal* x,size_t j) const {
+        return (phi(x,j+1)-phi(x,j-1)) / (z(j+1)-z(j-1));
+    }
+
+    doublereal E(const doublereal* x, size_t j) const {
+        return x[index(c_offset_E2, j)];
+    }
+
+    doublereal dEdz(const doublereal* x, size_t j) const {
+        return (E(x,j+1)-E(x,j-1)) / (z(j+1)-z(j-1));
+    }
+
     //! @}
 
     //! @name convective spatial derivatives.
@@ -375,6 +406,7 @@ protected:
     vector_fp m_tcon;
     vector_fp m_diff;
     vector_fp m_multidiff;
+    vector_fp m_mobi;
     Array2D m_dthermal;
     Array2D m_flux;
 
@@ -404,6 +436,12 @@ protected:
     //! flag for the radiative heat loss
     bool m_do_radiation;
 
+    // !flag for the poisson's equation
+    bool m_do_poisson;
+
+    // !flag for the electric effect
+    bool m_do_electric;
+
     //! radiative heat loss vector
     vector_fp m_qdotRadiation;
 
@@ -423,6 +461,15 @@ protected:
     //! Update the transport properties at grid points in the range from `j0`
     //! to `j1`, based on solution `x`.
     void updateTransport(doublereal* x, size_t j0, size_t j1);
+
+	// !electrical properties
+	vector_int m_speciesCharge;
+
+    // !index of species with charges
+	std::vector<size_t> m_kCharge;
+
+    // !index of electron
+    size_t m_kElectron; 
 
 private:
     vector_fp m_ybar;

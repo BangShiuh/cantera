@@ -25,6 +25,8 @@ StFlow::StFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
     m_do_soret(false),
     m_do_multicomponent(false),
     m_do_radiation(false),
+    m_do_poisson(false),
+    m_do_electric(false),
     m_kExcessLeft(0),
     m_kExcessRight(0)
 {
@@ -68,6 +70,8 @@ StFlow::StFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
     setBounds(1, -1e20, 1e20); // V
     setBounds(2, 200.0, 1e9); // temperature bounds
     setBounds(3, -1e20, 1e20); // lambda should be negative
+    setBounds(4, -1e20, 1e20); // no bounds on Electric potential
+    setBounds(5, -1e20, 1e20); // no bounds on Electric field strength
 
     // mass fraction bounds
     for (size_t k = 0; k < m_nsp; k++) {
@@ -79,6 +83,8 @@ StFlow::StFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
     m_refiner->setActive(1, false);
     m_refiner->setActive(2, false);
     m_refiner->setActive(3, false);
+    m_refiner->setActive(4, false);
+    m_refiner->setActive(5, false);
 
     vector_fp gr;
     for (size_t ng = 0; ng < m_points; ng++) {
@@ -91,6 +97,21 @@ StFlow::StFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
     m_kRadiating.resize(2, npos);
     m_kRadiating[0] = m_thermo->speciesIndex("CO2");
     m_kRadiating[1] = m_thermo->speciesIndex("H2O");
+
+    // Find indices for radiating species
+    m_kRadiating.resize(2, npos);
+    m_kRadiating[0] = m_thermo->speciesIndex("CO2");
+    m_kRadiating[1] = m_thermo->speciesIndex("H2O");
+
+    // Find indices for charge of species
+    for (size_t k = 0; k < m_nsp; k++){
+        if (m_speciesCharge[k] != 0){
+            m_kCharge.push_back(k);
+        }
+    }
+
+    // Find the index of electron 
+    m_kElectron = m_thermo->speciesIndex("E");
 }
 
 void StFlow::resize(size_t ncomponents, size_t points)
@@ -103,6 +124,7 @@ void StFlow::resize(size_t ncomponents, size_t points)
     m_tcon.resize(m_points, 0.0);
 
     m_diff.resize(m_nsp*m_points);
+    m_mobi.resize(m_nsp*m_points);
     if (m_do_multicomponent) {
         m_multidiff.resize(m_nsp*m_nsp*m_points);
         m_dthermal.resize(m_nsp, m_points, 0.0);
@@ -183,6 +205,28 @@ void StFlow::enableSoret(bool withSoret)
         throw CanteraError("setTransport",
                            "Thermal diffusion (the Soret effect) "
                            "requires using a multicomponent transport model.");
+    }
+}
+
+void StFlow::enableElectric(bool withElectric)
+{ 
+    if (!m_do_multicomponent) {
+        m_do_electric = withElectric;
+    } else {
+        throw CanteraError("setTransport",
+                           "the electric effect "
+                           "requires using a mixture-average transport model.");
+    }
+}
+
+void StFlow::enablePoisson(bool withPoisson)
+{ 
+    if (!m_do_multicomponent) {
+        m_do_poisson = withPoisson;
+    } else {
+        throw CanteraError("setTransport",
+                           "the electric effect "
+                           "requires using a mixture-average transport model.");
     }
 }
 
@@ -374,6 +418,8 @@ void StFlow::eval(size_t jg, doublereal* xg,
             rsd[index(c_offset_V,0)] = V(x,0);
             rsd[index(c_offset_T,0)] = T(x,0);
             rsd[index(c_offset_L,0)] = -rho_u(x,0);
+            rsd[index(c_offset_E1,0)] = phi(x,0);
+            rsd[index(c_offset_E1,0)] = E(x,0);
 
             // The default boundary condition for species is zero flux. However,
             // the boundary object may modify this.
@@ -458,6 +504,16 @@ void StFlow::eval(size_t jg, doublereal* xg,
 
             rsd[index(c_offset_L, j)] = lambda(x,j) - lambda(x,j-1);
             diag[index(c_offset_L, j)] = 0;
+
+            //-----------------------------------------------
+            //    Poisson's equation
+            //
+            //    d2/dx^2 (V) = -e/eps_0 * sum(q_k*n_k)
+            //-----------------------------------------------
+                rsd[index(c_offset_E1,j)] = phi(x,j) - phi(x,j-1);
+                diag[index(c_offset_E1, j)] = 0;
+                rsd[index(c_offset_E2, j)] = E(x,j) - E(x,j-1);
+                diag[index(c_offset_E1, j)] = 0;
         }
     }
 }
@@ -885,6 +941,13 @@ void AxiStagnFlow::evalRightBoundary(doublereal* x, doublereal* rsd,
     rsd[index(2,j)] = T(x,j);
     rsd[index(c_offset_L, j)] = lambda(x,j) - lambda(x,j-1);
     diag[index(c_offset_L, j)] = 0;
+
+    // set the voltage to zero
+    rsd[index(c_offset_E1, j)] = phi(x,j);
+    diag[index(c_offset_E1, j)] = 0;
+    rsd[index(c_offset_E2, j)] = E(x,j);
+    diag[index(c_offset_E2, j)] = 0;
+
     doublereal sum = 0.0;
     for (size_t k = 0; k < m_nsp; k++) {
         sum += Y(x,k,j);
@@ -939,6 +1002,14 @@ void FreeFlame::evalRightBoundary(doublereal* x, doublereal* rsd,
     doublereal sum = 0.0;
     rsd[index(c_offset_L, j)] = lambda(x,j) - lambda(x,j-1);
     diag[index(c_offset_L, j)] = 0;
+
+    // set the voltage to zero
+    rsd[index(c_offset_E1, j)] = phi(x,j);
+    diag[index(c_offset_E1, j)] = 0;
+    rsd[index(c_offset_E2, j)] = E(x,j);
+    diag[index(c_offset_E2, j)] = 0;
+
+
     for (size_t k = 0; k < m_nsp; k++) {
         sum += Y(x,k,j);
         rsd[index(k+c_offset_Y,j)] = m_flux(k,j-1) + rho_u(x,j)*Y(x,k,j);
