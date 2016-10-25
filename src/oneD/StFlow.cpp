@@ -60,7 +60,7 @@ StFlow::StFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
 
     m_diff.resize(m_nsp*m_points);
     m_multidiff.resize(m_nsp*m_nsp*m_points);
-    m_mobi.resize(m_nsp*points);
+    m_mobi.resize(m_nsp*m_points);
     m_flux.resize(m_nsp,m_points);
     m_wdot.resize(m_nsp,m_points, 0.0);
     m_ybar.resize(m_nsp);
