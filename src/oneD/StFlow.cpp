@@ -60,6 +60,7 @@ StFlow::StFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
 
     m_diff.resize(m_nsp*m_points);
     m_multidiff.resize(m_nsp*m_nsp*m_points);
+    m_mobi.resize(m_nsp*points);
     m_flux.resize(m_nsp,m_points);
     m_wdot.resize(m_nsp,m_points, 0.0);
     m_ybar.resize(m_nsp);
@@ -170,6 +171,7 @@ void StFlow::setTransport(Transport& trans, bool withSoret)
     m_do_multicomponent = (m_trans->transportType() == "Multi");
 
     m_diff.resize(m_nsp*m_points);
+    m_mobi.resize(m_nsp*m_points);
     if (m_do_multicomponent) {
         m_multidiff.resize(m_nsp*m_nsp*m_points);
         m_dthermal.resize(m_nsp, m_points, 0.0);
@@ -191,6 +193,7 @@ void StFlow::setTransport(Transport& trans)
     m_do_multicomponent = (m_trans->transportType() == "Multi");
 
     m_diff.resize(m_nsp*m_points);
+    m_mobi.resize(m_nsp*m_points);
     if (m_do_multicomponent) {
         m_multidiff.resize(m_nsp*m_nsp*m_points);
         m_dthermal.resize(m_nsp, m_points, 0.0);
@@ -419,7 +422,7 @@ void StFlow::eval(size_t jg, doublereal* xg,
             rsd[index(c_offset_T,0)] = T(x,0);
             rsd[index(c_offset_L,0)] = -rho_u(x,0);
             rsd[index(c_offset_E1,0)] = phi(x,0);
-            rsd[index(c_offset_E1,0)] = E(x,0);
+            rsd[index(c_offset_E2,0)] = E(x,0);
 
             // The default boundary condition for species is zero flux. However,
             // the boundary object may modify this.
@@ -513,7 +516,7 @@ void StFlow::eval(size_t jg, doublereal* xg,
                 rsd[index(c_offset_E1,j)] = phi(x,j) - phi(x,j-1);
                 diag[index(c_offset_E1, j)] = 0;
                 rsd[index(c_offset_E2, j)] = E(x,j) - E(x,j-1);
-                diag[index(c_offset_E1, j)] = 0;
+                diag[index(c_offset_E2, j)] = 0;
         }
     }
 }
