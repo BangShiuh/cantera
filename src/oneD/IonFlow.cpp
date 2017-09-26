@@ -30,10 +30,14 @@ IonFlow::IonFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
 
     // Find indices for charge of species
     for (size_t k = 0; k < m_nsp; k++){
-        if (m_speciesCharge[k] != 0){
+        if (m_speciesCharge[k] == 0){
+            m_kNeutral.push_back(k);
+        } else if (m_speciesCharge[k] > 0) {
+            m_kPositiveCharge.push_back(k);
             m_kCharge.push_back(k);
         } else {
-            m_kNeutral.push_back(k);
+            m_kNegativeCharge.push_back(k);
+            m_kCharge.push_back(k);
         }
     }
 
@@ -246,6 +250,38 @@ void IonFlow::evalResidual(double* x, double* rsd, int* diag,
             rsd[index(c_offset_P, j)] = m_outletVoltage - phi(x,j);
             diag[index(c_offset_P, j)] = 0;
         } else {
+            //--------------------------------------------------
+            //      Species' equation (ohm's law method)
+            //--------------------------------------------------
+            // positively-charged species
+            for (size_t k : m_kPositiveCharge) {
+                double drift = m_rho[j+1]* Y(x,k,j+1) * m_mobility[k+m_nsp*(j+1)];
+                drift -= m_rho[j-1]* Y(x,k,j-1) * m_mobility[k+m_nsp*(j-1)];
+                drift *= E(x,j) / (z(j+1) - z(j-1));
+                double sum = 0.0;
+                for (size_t k : m_kCharge) {
+                    sum += m_speciesCharge[k] * ElectronCharge * ND(x,k,j);
+                }
+                sum *= m_rho[j]* Y(x,k,j) * m_mobility[k+m_nsp*j] / epsilon_0;
+                drift += sum;
+
+                rsd[index(c_offset_Y + k, j)] -= drift /m_rho[j];
+            }
+            // negatively-charged species
+            for (size_t k : m_kPositiveCharge) {
+                double drift = m_rho[j+1]* Y(x,k,j+1) * m_mobility[k+m_nsp*(j+1)];
+                drift -= m_rho[j-1]* Y(x,k,j-1) * m_mobility[k+m_nsp*(j-1)];
+                drift *= E(x,j) / (z(j+1) - z(j-1));
+                double sum = 0.0;
+                for (size_t k : m_kCharge) {
+                    sum += m_speciesCharge[k] * ElectronCharge * ND(x,k,j);
+                }
+                sum *= m_rho[j]* Y(x,k,j) * m_mobility[k+m_nsp*j] / epsilon_0;
+                drift += sum;
+
+                rsd[index(c_offset_Y + k, j)] -= drift /m_rho[j];
+            }
+
             //-----------------------------------------------
             //    Poisson's equation
             //

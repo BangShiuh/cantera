@@ -109,6 +109,8 @@ protected:
 
     //! index of species with charges
     std::vector<size_t> m_kCharge;
+    std::vector<size_t> m_kPositiveCharge;
+    std::vector<size_t> m_kNegativeCharge;
 
     //! index of neutral species
     std::vector<size_t> m_kNeutral;
