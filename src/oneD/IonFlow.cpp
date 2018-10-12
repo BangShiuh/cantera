@@ -19,6 +19,7 @@ IonFlow::IonFlow(IdealGasPhase* ph, size_t nsp, size_t points) :
     StFlow(ph, nsp, points),
     m_import_electron_transport(false),
     m_stage(1),
+    m_dV(Undef),
     m_kElectron(npos)
 {
     // make a local copy of species charge
@@ -175,6 +176,18 @@ void IonFlow::evalResidual(double* x, double* rsd, int* diag,
         return;
     }
 
+    // Integrate Edz
+    if (m_dV != Undef) {
+        vector_fp E_vec;
+        vector_fp z_vec;
+        for (size_t j = jmin; j <= jmax; j++) {
+            E_vec.push_back(E(x,j));
+            z_vec.push_back(grid(j));
+        }
+        double dV = -1.0 * simpsonIntegration(z_vec, E_vec);
+        rsd[index(c_offset_E, 0)] = dV - m_dV;
+    }
+
     for (size_t j = jmin; j <= jmax; j++) {
         if (j == 0) {
             // enforcing the flux for charged species is difficult
@@ -183,7 +196,9 @@ void IonFlow::evalResidual(double* x, double* rsd, int* diag,
             for (size_t k : m_kCharge) {
                 rsd[index(c_offset_Y + k, 0)] = Y(x,k,0) - Y(x,k,1);
             }
-            rsd[index(c_offset_E, j)] = E(x,0);
+            if (m_dV == Undef) {
+                rsd[index(c_offset_E, 0)] = E(x,0);
+            }
             diag[index(c_offset_E, j)] = 0;
         } else if (j == m_points - 1) {
             rsd[index(c_offset_E, j)] = dEdz(x,j) - rho_e(x,j) / epsilon_0;

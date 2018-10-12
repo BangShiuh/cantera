@@ -61,6 +61,11 @@ public:
                               vector_fp& diff_e,
                               vector_fp& mobi_e);
 
+    //! set electric potential increase at the boundaries
+    void setElectricPotentialDifference(double dV) {
+        m_dV = dV;
+    }
+
 protected:
     /*!
      * This function overloads the original function. The residual function
@@ -99,6 +104,9 @@ protected:
 
     //! solving stage
     size_t m_stage;
+
+    //! electric potential difference
+    double m_dV;
 
     //! index of electron
     size_t m_kElectron;
