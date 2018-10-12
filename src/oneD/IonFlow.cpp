@@ -185,23 +185,14 @@ void IonFlow::evalResidual(double* x, double* rsd, int* diag,
             z_vec.push_back(grid(j));
         }
         double dV = -1.0 * simpsonIntegration(z_vec, E_vec);
-        rsd[index(c_offset_E, 0)] = dV - m_dV;
+        rsd[index(c_offset_E, 0)] = (dV - m_dV) / (z(m_points-1) -z(0));
     }
 
     for (size_t j = jmin; j <= jmax; j++) {
         if (j == 0) {
-            // enforcing the flux for charged species is difficult
-            // since charged species are also affected by electric
-            // force, so Neumann boundary condition is used.
-            for (size_t k : m_kCharge) {
-                rsd[index(c_offset_Y + k, 0)] = Y(x,k,0) - Y(x,k,1);
-            }
             if (m_dV == Undef) {
                 rsd[index(c_offset_E, 0)] = E(x,0);
             }
-            diag[index(c_offset_E, j)] = 0;
-        } else if (j == m_points - 1) {
-            rsd[index(c_offset_E, j)] = dEdz(x,j) - rho_e(x,j) / epsilon_0;
             diag[index(c_offset_E, j)] = 0;
         } else {
             //-----------------------------------------------
