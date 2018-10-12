@@ -607,7 +607,7 @@ class IonFlameBase(FlameBase):
         """
         Array containing the electric potential at each point.
         """
-        return cumtrapz(self.grid, self.E, initial=0)
+        return -1.0 * cumtrapz(self.grid, self.E, initial=0)
 
     def solve(self, loglevel=1, refine_grid=True, auto=False, stage=1, enable_energy=True, dV=None):
         if dV != None:
