@@ -574,6 +574,9 @@ cdef class IonFlow(_FlowBase):
     def set_solving_stage(self, stage):
         (<CxxIonFlow*>self.flow).setSolvingStage(stage)
 
+    def set_electric_potential_difference(self, dV):
+        (<CxxIonFlow*>self.flow).setElectricPotentialDifference(dV)
+
     property electric_field_enabled:
         """ Determines whether or not to solve the energy equation."""
         def __get__(self):
