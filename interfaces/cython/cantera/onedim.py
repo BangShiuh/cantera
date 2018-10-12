@@ -2,6 +2,7 @@
 # at http://www.cantera.org/license.txt for license and copyright information.
 
 import numpy as np
+from scipy.integrate import cumtrapz
 from ._cantera import *
 from .composite import Solution
 import csv as _csv
@@ -571,14 +572,15 @@ class IonFlameBase(FlameBase):
         u = self.u
         V = self.V
         E = self.E
+        EP = self.EP
 
         csvfile = open(filename, 'w')
         writer = _csv.writer(csvfile)
         writer.writerow(['z (m)', 'u (m/s)', 'V (1/s)', 'T (K)',
-                         'E (V/m)', 'rho (kg/m3)'] + self.gas.species_names)
+                         'E (V/m)', 'EP (V)', 'rho (kg/m3)'] + self.gas.species_names)
         for n in range(self.flame.n_points):
             self.set_gas_state(n)
-            writer.writerow([z[n], u[n], V[n], T[n], E[n], self.gas.density] +
+            writer.writerow([z[n], u[n], V[n], T[n], E[n], EP[n], self.gas.density] +
                             list(getattr(self.gas, species)))
         csvfile.close()
         if not quiet:
@@ -599,6 +601,13 @@ class IonFlameBase(FlameBase):
         Array containing the electric field strength at each point.
         """
         return self.profile(self.flame, 'eField')
+
+    @property
+    def EP(self):
+        """
+        Array containing the electric potential at each point.
+        """
+        return cumtrapz(self.grid, self.E, initial=0)
 
     def solve(self, loglevel=1, refine_grid=True, auto=False, stage=1, enable_energy=True):
         self.flame.set_solving_stage(stage)
