@@ -267,6 +267,11 @@ public:
     virtual void setParameters(const AnyMap& phaseNode,
                                const AnyMap& rootNode=AnyMap());
 
+    //! Electron species name
+    std::string electronSpeciesName() const {
+        return speciesName(m_electronSpeciesIndex);
+    }
+
 protected:
     virtual void updateThermo() const;
 

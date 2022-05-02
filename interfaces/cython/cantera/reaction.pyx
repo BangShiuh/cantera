@@ -344,6 +344,47 @@ cdef class TwoTempPlasmaRate(ArrheniusRateBase):
             return self.cxx_object().activationElectronEnergy()
 
 
+cdef class ElectronCollisionPlasmaRate(ReactionRate):
+    r"""
+    A reaction rate coefficient which depends on electron collision cross section
+    and electron energy distribution
+
+    """
+    _reaction_rate_type = "electron-collision-plasma"
+
+    def __cinit__(self, energy_levels=None, cross_section=None,
+                  input_data=None, init=True):
+        if init:
+            if isinstance(input_data, dict):
+                self._from_dict(input_data)
+            elif energy_levels is not None and cross_section is not None:
+                self._from_parameters(energy_levels, cross_section)
+            elif input_data is None:
+                self._from_dict({})
+            else:
+                raise TypeError("Invalid input parameters")
+            self.set_cxx_object()
+
+    def _from_dict(self, dict input_data):
+        self._rate.reset(new CxxElectronCollisionPlasmaRate(dict_to_anymap(input_data)))
+
+    def _from_parameters(self, energy_levels, cross_section):
+        # check length
+        if (len(energy_levels) != len(cross_section)):
+            raise ValueError('Length of energy levels and '
+                             'cross section are different')
+        cdef np.ndarray[np.double_t, ndim=1] data_energy_levels = \
+            np.ascontiguousarray(energy_levels, dtype=np.double)
+        cdef np.ndarray[np.double_t, ndim=1] data_cross_section = \
+            np.ascontiguousarray(cross_section, dtype=np.double)
+        self._rate.reset(new CxxElectronCollisionPlasmaRate(&data_energy_levels[0],
+                                                            &data_cross_section[0],
+                                                            len(energy_levels)))
+
+    cdef CxxElectronCollisionPlasmaRate* cxx_object(self):
+        return <CxxElectronCollisionPlasmaRate*>self.rate
+
+
 cdef class FalloffRate(ReactionRate):
     """
     Base class for parameterizations used to describe the fall-off in reaction rates
