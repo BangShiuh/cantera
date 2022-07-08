@@ -162,7 +162,7 @@ shared_ptr<ReactionRate> newReactionRate(const AnyMap& rate_node)
     const UnitSystem& system = rate_node.units();
     if (system.convertTo(1., "m") != 1. || system.convertTo(1., "kmol") != 1.) {
         throw InputFileError("ReactionRateFactory::newReactionRate",
-            rate_node.at("__units__"),
+            rate_node.hasKey("__units__") ? rate_node.at("__units__").as<AnyMap>() : rate_node,
             "Alternative units for 'length' or 'quantity` are not supported "
             "when creating\na standalone 'ReactionRate' object.");
     }
