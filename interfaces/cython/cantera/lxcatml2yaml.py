@@ -1,9 +1,29 @@
+#!/usr/bin/env python3
+# encoding: utf-8
+
+# This file is part of Cantera. See License.txt in the top-level directory or
+# at https://cantera.org/license.txt for license and copyright information.
+
+"""
+lxcatml2yaml.py: Convert the LXCat integral cross-section data in XML format (LXCATML) to YAML format
+
+Usage:
+    lxcatml2yaml [--input=<filename>]
+                 [--database=<database name>]
+                 [--species=<species name>]
+                 [--output=<filename>]
+
+Example:
+    ck2yaml --input=mycs.xml --database=itikawa --species=O2
+
+If the output file name is not given, an output file with the same name as the
+input file, with the extension changed to '.yaml'.
+"""
+
 from pathlib import Path
 import argparse
 import xml.etree.ElementTree as etree
 from typing import Union
-import os
-import re
 import sys
 try:
     import ruamel_yaml as yaml
