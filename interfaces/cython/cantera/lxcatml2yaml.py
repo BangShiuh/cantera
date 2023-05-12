@@ -14,7 +14,7 @@ Usage:
                  [--output=<filename>]
 
 Example:
-    ck2yaml --input=mycs.xml --database=itikawa --species=O2
+    lxcatml2yaml --input=mycs.xml --database=itikawa --species=O2
 
 If the output file name is not given, an output file with the same name as the
 input file, with the extension changed to '.yaml'.
