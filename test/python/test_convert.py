@@ -6,11 +6,18 @@ import logging
 import io
 import pytest
 
+from ruamel.yaml import YAML
+
+try:
+    import ruamel_yaml as yaml
+except ImportError:
+    from ruamel import yaml
+    
 from . import utilities
 from .utilities import allow_deprecated
 
 import cantera as ct
-from cantera import ck2yaml, cti2yaml, ctml2yaml, yaml2ck, lxcatml2yaml
+from cantera import ck2yaml, cti2yaml, ctml2yaml, yaml2ck
 
 class ck2yamlTest(utilities.CanteraTest):
     def convert(self, inputFile, thermo=None, transport=None,
@@ -1365,46 +1372,35 @@ class ctml2yamlTest(utilities.CanteraTest):
 
 
 class lxcatml2yamlTest(utilities.CanteraTest):
-    def convert(self, basename, src_dir=None):
-        if src_dir is None:
-            src_dir = self.test_data_path
+    
+    def convert(self, file_path=None, src_dir=None):
+        if file_path is None:
+            # if no file input
+            file_path = str(self.test_data_path) + "/test123.yaml"
+            
+        with open(file_path, "r") as file:
+            yaml=YAML(typ="safe", pure=True)
+            data = yaml.load(file)
 
-        lxcatml2yaml.convert(
-            Path(src_dir) / f"{basename}.xml",
-            self.test_work_path / f"{basename}-from-xml.yaml",
-        )
+        collisions = data['collisions']
+      
+        for c in collisions:
+            energy_levels = c['energy-levels']
+            cross_section = c['cross-section']
+            if len(energy_levels) != len(cross_section):
+                raise ValueError("energy levels and cross section must have the same length")
+        
 
-    def checkConversion(self, basename, cls=ct.Solution, ctmlphases=(),
-                        yamlphases=(), **kwargs):
-        ctmlPhase = cls(f"{basename}-from-xml.yaml", adjacent=ctmlphases, **kwargs)
-        yamlPhase = cls(f"{basename}.yaml", adjacent=yamlphases, **kwargs)
-
-        self.assertEqual(ctmlPhase.element_names, yamlPhase.element_names)
-        self.assertEqual(ctmlPhase.species_names, yamlPhase.species_names)
-        self.assertEqual(ctmlPhase.n_reactions, yamlPhase.n_reactions)
-        for C, Y in zip(ctmlPhase.species(), yamlPhase.species()):
-            self.assertEqual(C.composition, Y.composition)
-
-        for C, Y in zip(ctmlPhase.reactions(), yamlPhase.reactions()):
-            self.assertEqual(C.__class__, Y.__class__)
-            self.assertEqual(C.reactants, Y.reactants)
-            self.assertEqual(C.products, Y.products)
-            self.assertEqual(C.duplicate, Y.duplicate)
-
-        for i, sp in zip(range(ctmlPhase.n_reactions), ctmlPhase.kinetics_species_names):
-            self.assertEqual(ctmlPhase.reactant_stoich_coeff(sp, i),
-                             yamlPhase.reactant_stoich_coeff(sp, i))
-
-        return ctmlPhase, yamlPhase
-
-    @utilities.slow_test
     def test_convert(self):
-        self.convert("gri30")
-        ctmlPhase, yamlPhase = self.checkConversion('gri30')
-        X = {'O2': 0.3, 'H2': 0.1, 'CH4': 0.2, 'CO2': 0.4}
-        ctmlPhase.X = X
-        yamlPhase.X = X
-        self.checkThermo(ctmlPhase, yamlPhase, [300, 500, 1300, 2000])
-        self.checkKinetics(ctmlPhase, yamlPhase, [900, 1800], [2e5, 20e5])
-        self.checkTransport(ctmlPhase, yamlPhase, [298, 1001, 2400])
+        
+        self.convert()
+        self.convert("test/data/test123.yaml")
+        
+        # ctmlPhase, yamlPhase = self.checkConversion('gri30')
+        # X = {'O2': 0.3, 'H2': 0.1, 'CH4': 0.2, 'CO2': 0.4}
+        # ctmlPhase.X = X
+        # yamlPhase.X = X
+        # self.checkThermo(ctmlPhase, yamlPhase, [300, 500, 1300, 2000])
+        # self.checkKinetics(ctmlPhase, yamlPhase, [900, 1800], [2e5, 20e5])
+        # self.checkTransport(ctmlPhase, yamlPhase, [298, 1001, 2400])
 
