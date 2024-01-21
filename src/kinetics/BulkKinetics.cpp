@@ -513,6 +513,10 @@ void BulkKinetics::updateROP()
 
     for (auto& rates : m_rateHandlers) {
         rates->modifyRateConstants(m_ropf.data(), m_ropr.data());
+        // update the new equilibrium constants
+        for (size_t i = 0; i < nReactions(); ++i) {
+            m_rkcn[i] = m_ropr[i] / m_ropf[i];
+        }
     }
 
     // multiply ropf and ropr by concentration products
