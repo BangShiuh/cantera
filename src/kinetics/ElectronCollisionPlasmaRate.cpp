@@ -101,8 +101,8 @@ double ElectronCollisionPlasmaRate::evalFromStruct(const ElectronCollisionPlasma
     );
 
     // unit in kmol/m3/s
-    return 0.5 * pow(2.0 * ElectronCharge / ElectronMass, 0.5) * Avogadro *
-           simpson(distribution.cwiseProduct(cs_array), eps.pow(2.0));
+    return pow(2.0 * ElectronCharge / ElectronMass, 0.5) * Avogadro *
+           simpson(eps.cwiseProduct(distribution.cwiseProduct(cs_array)), eps);
 }
 
 void ElectronCollisionPlasmaRate::modifyRateConstants(
