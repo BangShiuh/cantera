@@ -76,12 +76,18 @@ double ElectronCollisionPlasmaRate::evalFromStruct(
     // Interpolate cross-sections data to the energy levels of
     // the electron energy distribution function when the interpolated
     // cross section is empty
-    // Note that the PlasmaPhase should handle the interpolated cross sections
-    // for all ElectronCollisionPlasmaRate reactions
     if (m_crossSectionsInterpolated.size() == 0) {
         for (double level : shared_data.energyLevels) {
             m_crossSectionsInterpolated.push_back(linearInterp(level,
                                                   m_energyLevels, m_crossSections));
+        }
+    } else {
+        // The interpolated cross section is set by the PlasmaPhase
+        // check the size of the vector
+        if (m_crossSectionsInterpolated.size() != shared_data.energyLevels.size()) {
+            throw CanteraError("ElectronCollisionPlasmaRate::evalFromStruct",
+                               "Energy levels and interpolated cross section ",
+                               "must have the same length.");
         }
     }
 
