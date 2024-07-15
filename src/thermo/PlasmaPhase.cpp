@@ -359,13 +359,25 @@ vector<double> PlasmaPhase::crossSection(shared_ptr<Reaction> reaction)
 double PlasmaPhase::normalizedElasticElectronEnergyLossRate()
 {
     double rate = 0.0;
-    // calculate dF/dε (forward difference)
-    Eigen::ArrayXd dF(nElectronEnergyLevels());
-    for (size_t i = 0; i < nElectronEnergyLevels() - 1; i++) {
-        dF[i] = (m_electronEnergyDist[i+1] - m_electronEnergyDist[i]) /
-                (m_electronEnergyLevels[i+1] - m_electronEnergyLevels[i]);
+    // calculate dF/dε
+    Eigen::ArrayXd dF(m_nPoints);
+    // first point using forward difference
+    dF[0] = (m_electronEnergyDist[1] - m_electronEnergyDist[0]) /
+            (m_electronEnergyLevels[1] - m_electronEnergyLevels[0]);
+    // middle points using central difference
+    for (size_t i = 1; i < m_nPoints - 1; i++) {
+        double h1 = m_electronEnergyLevels[i+1] - m_electronEnergyLevels[i];
+        double h0 = m_electronEnergyLevels[i] - m_electronEnergyLevels[i-1];
+        dF[i] = (h0 * h0 * m_electronEnergyDist[i+1] +
+                (h1 * h1 - h0 * h0) * m_electronEnergyDist[i] -
+                h1 * h1 * m_electronEnergyDist[i-1]) /
+                (h1 * h0) / (h1 + h0);
     }
-    dF[nElectronEnergyLevels()-1] = dF[nElectronEnergyLevels()-2];
+    // last point using backward difference
+    dF[m_nPoints-1] = (m_electronEnergyDist[m_nPoints-1] -
+                      m_electronEnergyDist[m_nPoints-2]) /
+                      (m_electronEnergyLevels[m_nPoints-1] -
+                      m_electronEnergyLevels[m_nPoints-2]);
 
     for (size_t i : m_elasticCollisionIndices) {
         size_t k = targetSpeciesIndex(m_collisions[i]);
