@@ -1233,6 +1233,14 @@ class TestPlasmaPhase(utilities.CanteraTest):
                                     'Only one electron species is allowed'):
             self.phase.add_species(electron)
 
+    def test_elastic_power_loss(self):
+        self.phase.mean_electron_energy = 1.0
+        self.phase.TPX = 1000, ct.one_atm, "O2:1, E:1e-5"
+        assert self.phase.elastic_power_loss == approx(-199274.852)
+        # when T is as high as Te the energy loss rate becomes small
+        self.phase.TPX = 11604, ct.one_atm, "O2:1, E:1e-5"
+        assert self.phase.elastic_power_loss == approx(-18243.565)
+
 
 class ImportTest(utilities.CanteraTest):
     """
