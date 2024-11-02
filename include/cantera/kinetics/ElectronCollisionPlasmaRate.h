@@ -126,22 +126,22 @@ public:
     }
 
     //! The value of #m_energyLevels [eV]
-    const vector<double>& energyLevels() const {
+    virtual const vector<double>& energyLevels() const override {
         return m_energyLevels;
     }
 
     //! The value of #m_crossSections [m2]
-    const vector<double>& crossSections() const {
+    virtual const vector<double>& crossSections() const override {
         return m_crossSections;
     }
 
     //! The value of #m_crossSectionsInterpolated
-    const vector<double>& crossSectionInterpolated() const {
+    virtual const vector<double>& crossSectionInterpolated() const override {
         return m_crossSectionsInterpolated;
     }
 
     //! Set the value of #m_crossSectionsInterpolated
-    void setCrossSectionInterpolated(vector<double>& cs) {
+    virtual void setCrossSectionInterpolated(vector<double>& cs) override {
         m_crossSectionsInterpolated = cs;
     }
 

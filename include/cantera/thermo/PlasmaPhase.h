@@ -446,9 +446,6 @@ private:
     //! The list of shared pointers of plasma collision reactions
     vector<shared_ptr<Reaction>> m_collisions;
 
-    //! The list of shared pointers of ElectronCollisionPlasmaRate
-    vector<shared_ptr<ElectronCollisionPlasmaRate>> m_collisionRates;
-
     //! The collision-target species indices of #m_collisions
     vector<size_t> m_targetSpeciesIndices;
 

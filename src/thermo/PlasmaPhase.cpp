@@ -5,7 +5,6 @@
 
 #include "cantera/thermo/PlasmaPhase.h"
 #include <boost/math/special_functions/gamma.hpp>
-#include <boost/polymorphic_pointer_cast.hpp>
 #include "cantera/thermo/Species.h"
 #include "cantera/base/global.h"
 #include "cantera/numerics/funcs.h"
@@ -307,7 +306,6 @@ void PlasmaPhase::addSolution(std::weak_ptr<Solution> soln) {
 void PlasmaPhase::setCollisions()
 {
     m_collisions.clear();
-    m_collisionRates.clear();
     m_targetSpeciesIndices.clear();
 
     if (shared_ptr<Solution> soln = m_soln.lock()) {
@@ -322,16 +320,11 @@ void PlasmaPhase::setCollisions()
         }
 
         // Resize based on the size of m_collisions
-        m_collisionRates.resize(nCollisions());
         m_targetSpeciesIndices.resize(nCollisions());
 
         for (size_t i = 0; i < nCollisions(); i++) {
-            std::shared_ptr<Reaction> R = m_collisions[i];
-            m_collisionRates[i] = boost::polymorphic_pointer_downcast
-                                    <ElectronCollisionPlasmaRate>(R->rate());
-
             // Identify target species for electron-collision reactions
-            for (const auto& [name, stoich] : R->reactants) {
+            for (const auto& [name, stoich] : m_collisions[i]->reactants) {
                 // Reactants are expected to be electrons and the target species
                 if (name != electronSpeciesName()) {
                     m_targetSpeciesIndices[i] = speciesIndex(name);
@@ -345,14 +338,15 @@ void PlasmaPhase::setCollisions()
 
 void PlasmaPhase::updateInterpolatedCrossSections()
 {
-    for (shared_ptr<ElectronCollisionPlasmaRate> rate : m_collisionRates) {
+    for (size_t j = 0; j < m_collisions.size(); j++) {
         for (size_t i = 0; i < nElectronEnergyLevels(); i++) {
-            double level = m_electronEnergyLevels[i];
-            m_cs_interp[i] = linearInterp(level,
-                rate->energyLevels(), rate->crossSections());
+            m_cs_interp[i] = linearInterp(
+                m_electronEnergyLevels[i],
+                m_collisions[j]->rate()->energyLevels(),
+                m_collisions[j]->rate()->crossSections());
         }
         // Set the interpolated cross section
-        rate->setCrossSectionInterpolated(m_cs_interp);
+        m_collisions[j]->rate()->setCrossSectionInterpolated(m_cs_interp);
     }
     interpolatedCrossSectionsChanged();
 }
@@ -402,8 +396,8 @@ void PlasmaPhase::updateElasticElectronEnergyLossCoefficients()
 
         // Map cross sections to Eigen::ArrayXd
         auto cs_array = Eigen::Map<const Eigen::ArrayXd>(
-            m_collisionRates[i]->crossSectionInterpolated().data(),
-            m_collisionRates[i]->crossSectionInterpolated().size()
+            m_collisions[i]->rate()->crossSectionInterpolated().data(),
+            m_collisions[i]->rate()->crossSectionInterpolated().size()
         );
 
         // Mass ratio calculation
