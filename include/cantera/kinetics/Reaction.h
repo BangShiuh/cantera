@@ -162,6 +162,21 @@ public:
         return bool(m_third_body);
     }
 
+    //! Register a function to be called if setRate is used.
+    //! @param id  A unique ID corresponding to the object affected by the callback.
+    //!   Typically, this is a pointer to an object that also holds a reference to the
+    //!   Solution object.
+    //! @param callback  The callback function to be called after any component of the
+    //!   Solution is replaced.
+    //! When the callback becomes invalid (for example, the corresponding object is
+    //! being deleted, the removeChangedCallback() method must be invoked.
+    //! @since New in %Cantera 3.1
+    void registerSetRateCallback(void* id, const function<void()>& callback);
+
+    //! Remove the setRate callback function associated with the specified object.
+    //! @since New in %Cantera 3.1
+    void removeSetRateCallback(void* id);
+
 protected:
     //! Store the parameters of a Reaction needed to reconstruct an identical
     //! object using the newReaction(AnyMap&, Kinetics&) function. Does not
@@ -183,6 +198,9 @@ protected:
     //! Relative efficiencies of third-body species in enhancing the reaction rate
     //! (if applicable)
     shared_ptr<ThirdBody> m_third_body;
+
+    //! Callback functions that are invoked when the rate is replaced.
+    map<void*, function<void()>> m_setRateCallbacks;
 };
 
 

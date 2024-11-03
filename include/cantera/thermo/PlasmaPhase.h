@@ -94,6 +94,8 @@ public:
      */
     explicit PlasmaPhase(const string& inputFile="", const string& id="");
 
+    ~PlasmaPhase();
+
     string type() const override {
         return "plasma";
     }
@@ -373,8 +375,8 @@ protected:
     //! Electron energy distribution norm
     void normalizeElectronEnergyDistribution();
 
-    //! Update interpolated cross sections
-    void updateInterpolatedCrossSections();
+    //! Update interpolated cross section of a collision
+    void updateInterpolatedCrossSection(shared_ptr<Reaction> collision);
 
     //! Update electron energy distribution difference
     void updateElectronEnergyDistDifference();
@@ -455,6 +457,9 @@ private:
 
     //! Set collisions
     void setCollisions();
+
+    //! Add a collision
+    void addCollision(std::shared_ptr<Reaction> collision);
 
 };
 
