@@ -1954,7 +1954,7 @@ class TestIonFreeFlame:
         self.sim.solve(loglevel=0, stage=2)
 
         # Regression test
-        assert max(self.sim.E) == approx(149.63179056676853, rel=1e-3)
+        assert max(self.sim.E) == approx(151.85782, rel=1e-3)
 
 
 class TestIonBurnerFlame:

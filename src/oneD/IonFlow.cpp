@@ -151,22 +151,34 @@ void IonFlow::frozenIonMethod(const double* x, size_t j0, size_t j1)
 void IonFlow::electricFieldMethod(const double* x, size_t j0, size_t j1)
 {
     for (size_t j = j0; j < j1; j++) {
-        double rho = density(j);
-        double dz = z(j+1) - z(j);
+        setGasAtMidpoint(x,j);
 
-        // mixture-average diffusion
-        for (size_t k = 0; k < m_nsp; k++) {
-            m_flux(k,j) = m_diff[k+m_nsp*j];
-            m_flux(k,j) *= (X(x,k,j) - X(x,k,j+1))/dz;
+        // mixture-average diffusion for neutral species
+        for (size_t k : m_kNeutral) {
+            m_flux(k,j) = m_diff[k+m_nsp*j] * (X(x,k,j) - X(x,k,j+1)) / m_dz[j];
         }
 
-        // ambipolar diffusion
-        double E_ambi = E(x,j);
+        // Charged species discretization
         for (size_t k : m_kCharge) {
-            double Yav = 0.5 * (Y(x,k,j) + Y(x,k,j+1));
-            double drift = rho * Yav * E_ambi
-                           * m_speciesCharge[k] * m_mobility[k+m_nsp*j];
-            m_flux(k,j) += drift;
+            double drift = m_speciesCharge[k] * m_mobility[k+m_nsp*j] * E(x,j) *
+                           m_thermo->density();
+            // calculate the Péclet number
+            double peclet = drift * m_wt[k] / m_thermo->meanMolecularWeight() *
+                            m_dz[j] / m_diff[k+m_nsp*j];
+            if (abs(peclet) > 1e-5) {
+                // Scharfetter Gummel scheme
+                m_flux(k,j) = peclet * m_diff[k+m_nsp*j] / m_dz[j] *
+                              (X(x,k,j) - exp(-peclet) * X(x,k,j+1)) /
+                              (1.0 - exp(-peclet));
+            } else {
+                // upwind drift-diffusion scheme when the Péclet number is small
+                if (drift >= 0.0) {
+                    drift *= Y(x,k,j);
+                } else {
+                    drift *= Y(x,k,j+1);
+                }
+                m_flux(k,j) = m_diff[k+m_nsp*j] * (X(x,k,j) - X(x,k,j+1)) / m_dz[j] + drift;
+            }
         }
 
         // correction flux
